@@ -10,11 +10,14 @@ namespace testapi.Controllers;
 public class UserEFController : ControllerBase
 {
     DataContextEF _entityFramework;
+    IUserRepository _userRepository;
     IMapper _mapper;
 
-    public UserEFController(IConfiguration config)
+    public UserEFController(IConfiguration config, IUserRepository userRepository)
     {
         _entityFramework = new DataContextEF(config);
+
+        _userRepository = userRepository;
 
         _mapper = new Mapper(
             new MapperConfiguration(cfg =>
@@ -27,30 +30,19 @@ public class UserEFController : ControllerBase
     [HttpGet]
     public IEnumerable<User> GetUsers()
     {
-        IEnumerable<User> users = _entityFramework.Users.ToList<User>();
-
-        return users;
+        return _userRepository.GetUsers();
     }
 
     [HttpGet("{userId}")]
     public User GetSingleUser(int userId)
     {
-        User? user = _entityFramework.Users.Where(u => u.UserId == userId).FirstOrDefault<User>();
-
-        if (user != null)
-        {
-            return user;
-        }
-
-        throw new Exception("failed to get User");
+        return _userRepository.GetSingleUser(userId);
     }
 
     [HttpPut]
     public IActionResult EditUser(User user)
     {
-        User? userDb = _entityFramework.Users
-            .Where(u => u.UserId == user.UserId)
-            .FirstOrDefault<User>();
+        User? userDb = _userRepository.GetSingleUser(user.UserId);
 
         if (userDb != null)
         {
@@ -60,14 +52,14 @@ public class UserEFController : ControllerBase
             userDb.Gender = user.Gender;
             userDb.Active = user.Active;
 
-            if (_entityFramework.SaveChanges() > 0)
+            if (_userRepository.SaveChanges())
             {
                 return Ok();
             }
             throw new Exception("Failed to update user");
         }
 
-        throw new Exception("Failed to Get user");
+        throw new Exception("Failed to update user");
     }
 
     [HttpPost]
@@ -75,9 +67,9 @@ public class UserEFController : ControllerBase
     {
         User userDb = _mapper.Map<User>(user);
 
-        _entityFramework.Add(userDb);
+        _userRepository.AddEntity<User>(userDb);
 
-        if (_entityFramework.SaveChanges() > 0)
+        if (_userRepository.SaveChanges())
         {
             return Ok();
         }
@@ -88,13 +80,13 @@ public class UserEFController : ControllerBase
     [HttpDelete("{userId}")]
     public IActionResult DeleteUser(int userId)
     {
-        User? userDb = _entityFramework.Users.Where(u => u.UserId == userId).FirstOrDefault<User>();
+        User? userDb = _userRepository.GetSingleUser(userId);
 
         if (userDb != null)
         {
-            _entityFramework.Users.Remove(userDb);
+            _userRepository.RemoveEntity<User>(userDb);
 
-            if (_entityFramework.SaveChanges() > 0)
+            if (_userRepository.SaveChanges())
             {
                 return Ok();
             }
