@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using testapi.Data;
 using testapi.Model;
@@ -9,10 +10,18 @@ namespace testapi.Controllers;
 public class UserEFController : ControllerBase
 {
     DataContextEF _entityFramework;
+    IMapper _mapper;
 
     public UserEFController(IConfiguration config)
     {
         _entityFramework = new DataContextEF(config);
+
+        _mapper = new Mapper(
+            new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<UserToAddDto, User>();
+            })
+        );
     }
 
     [HttpGet]
@@ -64,13 +73,7 @@ public class UserEFController : ControllerBase
     [HttpPost]
     public IActionResult AddUser(UserToAddDto user)
     {
-        User userDb = new User();
-
-        userDb.FirstName = user.FirstName;
-        userDb.LastName = user.LastName;
-        userDb.Email = user.Email;
-        userDb.Gender = user.Gender;
-        userDb.Active = user.Active;
+        User userDb = _mapper.Map<User>(user);
 
         _entityFramework.Add(userDb);
 
